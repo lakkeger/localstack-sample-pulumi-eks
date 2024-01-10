@@ -6,7 +6,7 @@ import pulumi_kubernetes as kubernetes
 # Create an EKS cluster with the default configuration.
 cluster = eks.Cluster("cluster", fargate=True)
 eks_provider = kubernetes.Provider("eks-provider", kubeconfig=cluster.kubeconfig_json)
-# Deploy a small canary service (NGINX), to test that the cluster is working.
+# Deploy a small canary service (httpd), to test that the cluster is working.
 my_deployment = kubernetes.apps.v1.Deployment("my-deployment",
     metadata=kubernetes.meta.v1.ObjectMetaArgs(
         labels={
@@ -29,7 +29,7 @@ my_deployment = kubernetes.apps.v1.Deployment("my-deployment",
             spec=kubernetes.core.v1.PodSpecArgs(
                 containers=[kubernetes.core.v1.ContainerArgs(
                     name="my-deployment",
-                    image="nginx",
+                    image="httpd",
                     ports=[kubernetes.core.v1.ContainerPortArgs(
                         name="http",
                         container_port=80,
@@ -40,7 +40,7 @@ my_deployment = kubernetes.apps.v1.Deployment("my-deployment",
     ),
     opts=pulumi.ResourceOptions(provider=eks_provider))
 
-my_service = kubernetes.core.v1.Service("my-service2",
+my_service = kubernetes.core.v1.Service("my-service",
     metadata=kubernetes.meta.v1.ObjectMetaArgs(
         labels={
             "appClass": "my-deployment",
@@ -81,13 +81,13 @@ ingress = kubernetes.networking.v1.Ingress("ingress",
                 )],
             ),
         )],
-    ))
-
-cluster_info = aws.eks.get_cluster(name=cluster.eks_cluster.name)
+    ),
+    opts=pulumi.ResourceOptions(provider=eks_provider))
 
 # Export the cluster's kubeconfig.
 pulumi.export("update-cmd",
-              cluster.eks_cluster.name.apply(lambda cluster_name: f"awslocal eks update-kubeconfig --name {cluster_name} && kubectl config use-context {cluster_info.arn}")
+              cluster.eks_cluster.name.apply(lambda cluster_name: f"awslocal eks update-kubeconfig --name {cluster_name} \
+&& kubectl config use-context arn:aws:eks:{aws.get_region().name}:{aws.get_caller_identity().account_id}:cluster/{cluster_name}")
 )
 # # Export the URL for the load balanced service.
 pulumi.export("url", "http://localhost:8081/")
