@@ -1,0 +1,57 @@
+name: Pulumi EKS on LS
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+# Only one pull-request triggered run should be executed at a time
+# (head_ref is only set for PR events, otherwise fallback to run_id which differs for every run).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env: 
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_REGION: us-east-1
+      LOCALSTACK_AUTH_TOKEN: ${{ secrets.TEST_LOCALSTACK_AUTH_TOKEN }}
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Start localstack manually
+      env:
+        TAG: "3.0.2"
+      shell: bash
+      run: |
+        pip install localstack
+        docker pull localstack/localstack-pro:${TAG}
+        docker images
+        docker inspect localstack/localstack-pro:${TAG}
+        localstack start -d
+
+    - name: Run the LocalStack runtime tests
+      shell: bash
+      run: |
+        export PULUMI_BACKEND_URL=file://`pwd`
+        export PULUMI_CONFIG_PASSPHRASE=lsdevtest
+        pulumi stack init dev
+        pulumi stack select dev
+        pulumi up -y
+
+    - name: Setup context
+      shell: bash
+      run: |
+        export CLUSTER_NAME=$(aws eks list-clusters --region=us-east-1 | jq -r '.clusters[0]')
+        aws eks update-kubeconfig --name $CLUSTER_NAME && kubectl config use-context arn:aws:eks:us-east-1:000000000000:cluster/$CLUSTER_NAME
+    
+    - run: kubectl get all
+
+    - run: curl http://localhost:8081
