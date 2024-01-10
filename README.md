@@ -49,10 +49,14 @@ localstack start -d
 ``` 
 2. Run pulumi
 ```
-pulumi up -y -C test-eks -s dev
+pulumi up -y -C test-eks -s test
 ```
 3. Visit `http://localhost:8081`
 4. Profit 💵
+
+### To clean up
+Simply run:  
+```pulumi destroy -y -C test-eks -s test```
 
 ## Notes
 
