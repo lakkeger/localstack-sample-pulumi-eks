@@ -28,12 +28,14 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
 
-    - name: Start LocalStack
-      uses: LocalStack/setup-localstack@v0.1.2
-      with:
-        image-tag: 'latest'
-        install-awslocal: 'true'
-        use-pro: 'true'
+    - name: Start localstack manually
+      env:
+        TAG: "latest"
+      shell: bash
+      run: |
+        pip install localstack awscli-local
+        docker pull localstack/localstack-pro:${TAG}
+        localstack start -d
 
     - name: Run Pulumi
       shell: bash
