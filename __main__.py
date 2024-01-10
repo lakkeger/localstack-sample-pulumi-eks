@@ -4,8 +4,12 @@ import pulumi_eks as eks
 import pulumi_kubernetes as kubernetes
 
 # Create an EKS cluster with the default configuration.
-cluster = eks.Cluster("cluster", fargate=True)
-eks_provider = kubernetes.Provider("eks-provider", kubeconfig=cluster.kubeconfig_json)
+cluster = eks.Cluster("cluster",
+                      fargate=True,
+                      opts=pulumi.ResourceOptions(custom_timeouts=pulumi.CustomTimeouts(create="20m")))
+eks_provider = kubernetes.Provider("eks-provider",
+                                   kubeconfig=cluster.kubeconfig_json,
+                                   opts=pulumi.ResourceOptions(custom_timeouts=pulumi.CustomTimeouts(create="10m")))
 # Deploy a small canary service (httpd), to test that the cluster is working.
 my_deployment = kubernetes.apps.v1.Deployment("my-deployment",
     metadata=kubernetes.meta.v1.ObjectMetaArgs(
@@ -38,7 +42,8 @@ my_deployment = kubernetes.apps.v1.Deployment("my-deployment",
             ),
         ),
     ),
-    opts=pulumi.ResourceOptions(provider=eks_provider))
+    opts=pulumi.ResourceOptions(provider=eks_provider,
+                                custom_timeouts=pulumi.CustomTimeouts(create="10m")))
 
 my_service = kubernetes.core.v1.Service("my-service",
     metadata=kubernetes.meta.v1.ObjectMetaArgs(
