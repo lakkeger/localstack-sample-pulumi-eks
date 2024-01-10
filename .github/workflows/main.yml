@@ -26,18 +26,14 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
 
-    - name: Start localstack manually
-      env:
-        TAG: "3.0.2"
-      shell: bash
-      run: |
-        pip install localstack
-        docker pull localstack/localstack-pro:${TAG}
-        docker images
-        docker inspect localstack/localstack-pro:${TAG}
-        localstack start -d
+    - name: Start LocalStack
+      uses: LocalStack/setup-localstack@v0.1.2
+      with:
+        image-tag: 'latest'
+        install-awslocal: 'true'
+        use-pro: 'true'
 
-    - name: Run the LocalStack runtime tests
+    - name: Run Pulumi
       shell: bash
       run: |
         export PULUMI_BACKEND_URL=file://`pwd`
@@ -49,8 +45,8 @@ jobs:
     - name: Setup context
       shell: bash
       run: |
-        export CLUSTER_NAME=$(aws eks list-clusters --region=us-east-1 | jq -r '.clusters[0]')
-        aws eks update-kubeconfig --name $CLUSTER_NAME && kubectl config use-context arn:aws:eks:us-east-1:000000000000:cluster/$CLUSTER_NAME
+        export CLUSTER_NAME=$(awslocal eks list-clusters --region=us-east-1 | jq -r '.clusters[0]')
+        awslocal eks update-kubeconfig --name $CLUSTER_NAME && kubectl config use-context arn:aws:eks:us-east-1:000000000000:cluster/$CLUSTER_NAME
     
     - run: kubectl get all
 
