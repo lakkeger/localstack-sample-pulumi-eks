@@ -23,23 +23,44 @@ jobs:
       AWS_DEFAULT_REGION: us-east-1
       AWS_ENDPOINT_URL: http://localhost.localstack.cloud:4566
       LOCALSTACK_AUTH_TOKEN: ${{ secrets.TEST_LOCALSTACK_AUTH_TOKEN }}
+      LOCALSTACK_VOLUME_DIR: /tmp
 
     steps:
+    - name: Install tools
+      run: |
+        curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+        unzip awscliv2.zip
+        ./aws/install
+        pip install awscli-local
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+        curl -fsSL https://get.pulumi.com | sh
+
     - name: Checkout
       uses: actions/checkout@v3
 
     - name: Start localstack manually
       env:
         TAG: "latest"
-      shell: bash
       run: |
-        pip install localstack awscli-local
+        pip install localstack
         docker pull localstack/localstack-pro:${TAG}
-        localstack start -d
+        docker run -d --rm \
+          -e DISABLE_EVENTS=1 \
+          -e DEBUG=1 \
+          -e LOCALSTACK_AUTH_TOKEN=${LOCALSTACK_AUTH_TOKEN} \
+          -e LS_LOG=trace \
+          --name localstack_main \
+          -v "${LOCALSTACK_VOLUME_DIR}:/var/lib/localstack" \
+          -v "/var/run/docker.sock:/var/run/docker.sock" \
+          -p "127.0.0.1:4566:4566" \
+          -p "127.0.0.1:4510-4559:4510-4559" \
+          localstack/localstack-pro
 
     - name: Run Pulumi
       shell: bash
       run: |
+        export PATH=$PATH:/root/.pulumi/bin
         export PULUMI_BACKEND_URL=file://`pwd`
         export PULUMI_CONFIG_PASSPHRASE=lsdevtest
         pulumi stack init test
