@@ -1,0 +1,43 @@
+name: Pull Requests
+
+on: pull_request
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Getting OS info
+        run: |
+          cat /etc/os-release
+
+      - name: Checking for docker
+        run: |
+          docker info
+          ls -l /var/run/docker.sock
+
+      - name: Set up Python 3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.7'
+          cache: 'pip' # caching pip dependencies
+
+      - name: Docker compose
+        run: |
+         docker  --debug compose up --build -d
+
+    #   - name: Run tests
+    #     run: |
+    #       mkdir ~/.aws
+    #       if [ ! -f ~/.aws/config ]; then
+    #         echo "[default]\nregion=us-east-1" >> ~/.aws/config
+    #       else
+    #         echo "File already exists"
+    #       fi
+    #       pytest
+
+      - name: Docker compose down
+        run: |
+          docker compose down

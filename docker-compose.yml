@@ -1,0 +1,20 @@
+version: "3"
+services:
+  localstack:
+    privileged: true
+    container_name: "${LOCALSTACK_DOCKER_NAME:-localstack_main}"
+    image: localstack/localstack:3.1.0
+    ports:
+      - "4566-4599:4566-4599"
+    environment:
+      - DEBUG=1
+      - DOCKER_HOST=unix:///var/run/docker.sock # this is default. Maybe can be removed
+      - DATA_DIR=${DATA_DIR- }
+      - LOCALSTACK_HOST=localstack
+      - AWS_DEFAULT_REGION=us-east-1
+      - LAMBDA_RUNTIME_ENVIRONMENT_TIMEOUT=120
+      - DOCKER_SDK_DEFAULT_RETRIES=5
+      - LAMBDA_RUNTIME_IMAGE_MAPPING=PRIVATE_HUB/lambda/python:3.7
+    volumes:
+      - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
