@@ -26,17 +26,12 @@ jobs:
 
       - name: Docker compose
         run: |
-         docker  --debug compose up --build -d
+          docker  --debug compose up --build -d
 
-    #   - name: Run tests
-    #     run: |
-    #       mkdir ~/.aws
-    #       if [ ! -f ~/.aws/config ]; then
-    #         echo "[default]\nregion=us-east-1" >> ~/.aws/config
-    #       else
-    #         echo "File already exists"
-    #       fi
-    #       pytest
+      - name: Docker compose
+        run: |
+          sleep 30
+          docker compose logs localstack
 
       - name: Docker compose down
         run: |
